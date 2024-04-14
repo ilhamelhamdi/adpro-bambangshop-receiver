@@ -100,4 +100,8 @@ impl NotificationService {
         let notification_result: Notification = NotificationRepository::add(payload);
         return Ok(notification_result);
     }
+
+    pub fn list_messages() -> Result<Vec<String>> {
+        return Ok(NotificationRepository::list_all_as_string());
+    }
 }
