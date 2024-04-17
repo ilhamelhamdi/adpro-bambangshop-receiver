@@ -59,25 +59,25 @@ You can install Postman via this website: https://www.postman.com/downloads/
     -   Open another new terminal, edit `ROCKET_PORT` in `.env` to `8003`, then execute `cargo run`.
 
 ## Mandatory Checklists (Subscriber)
--   [ ] Clone https://gitlab.com/ichlaffterlalu/bambangshop-receiver to a new repository.
+-   [x] Clone https://gitlab.com/ichlaffterlalu/bambangshop-receiver to a new repository.
 -   **STAGE 1: Implement models and repositories**
-    -   [ ] Commit: `Create Notification model struct.`
-    -   [ ] Commit: `Create SubscriberRequest model struct.`
-    -   [ ] Commit: `Create Notification database and Notification repository struct skeleton.`
-    -   [ ] Commit: `Implement add function in Notification repository.`
-    -   [ ] Commit: `Implement list_all_as_string function in Notification repository.`
-    -   [ ] Write answers of your learning module's "Reflection Subscriber-1" questions in this README.
--   **STAGE 3: Implement services and controllers**
-    -   [ ] Commit: `Create Notification service struct skeleton.`
-    -   [ ] Commit: `Implement subscribe function in Notification service.`
-    -   [ ] Commit: `Implement subscribe function in Notification controller.`
-    -   [ ] Commit: `Implement unsubscribe function in Notification service.`
-    -   [ ] Commit: `Implement unsubscribe function in Notification controller.`
-    -   [ ] Commit: `Implement receive_notification function in Notification service.`
-    -   [ ] Commit: `Implement receive function in Notification controller.`
-    -   [ ] Commit: `Implement list_messages function in Notification service.`
-    -   [ ] Commit: `Implement list function in Notification controller.`
-    -   [ ] Write answers of your learning module's "Reflection Subscriber-2" questions in this README.
+    -   [x] Commit: `Create Notification model struct.`
+    -   [x] Commit: `Create SubscriberRequest model struct.`
+    -   [x] Commit: `Create Notification database and Notification repository struct skeleton.`
+    -   [x] Commit: `Implement add function in Notification repository.`
+    -   [x] Commit: `Implement list_all_as_string function in Notification repository.`
+    -   [x] Write answers of your learning module's "Reflection Subscriber-1" questions in this README.
+-   **STAGE 2: Implement services and controllers**
+    -   [x] Commit: `Create Notification service struct skeleton.`
+    -   [x] Commit: `Implement subscribe function in Notification service.`
+    -   [x] Commit: `Implement subscribe function in Notification controller.`
+    -   [x] Commit: `Implement unsubscribe function in Notification service.`
+    -   [x] Commit: `Implement unsubscribe function in Notification controller.`
+    -   [x] Commit: `Implement receive_notification function in Notification service.`
+    -   [x] Commit: `Implement receive function in Notification controller.`
+    -   [x] Commit: `Implement list_messages function in Notification service.`
+    -   [x] Commit: `Implement list function in Notification controller.`
+    -   [x] Write answers of your learning module's "Reflection Subscriber-2" questions in this README.
 
 ## Your Reflections
 This is the place for you to write reflections:
@@ -85,5 +85,46 @@ This is the place for you to write reflections:
 ### Mandatory (Subscriber) Reflections
 
 #### Reflection Subscriber-1
+1. ##### `RwLock<>` Over `Mutex<>`
+    > In this tutorial, we used RwLock<> to synchronise the use of Vec of Notifications. Explain why it is necessary for this case, and explain why we do not use Mutex<> instead?
+    `RwLock` (Read-Write Lock) di sini digunakan untuk menyinkronkan akses ke `Vec<Notification>`. Hal ini diperlukan karena `Vec<Notification>` digunakan oleh beberapa thread, dan tanpa sinkronisasi, _data race_ bisa terjadi.
+
+    `RwLock` dipilih daripada `Mutex` karena memungkinkan beberapa _reader_ atau satu _writer_ pada satu waktu tertentu. `RwLock` memberikan fleksibilitas lebih daripada `Mutex`. Ketika `Vec<Notification>` sedang dibaca, beberapa thread lain dapat membacanya secara bersamaan. Tentunya hal ini meningkatkan performa aplikasi. Namun, ketika menulis ke Vec<Notification>, hanya satu _thread_ yang dapat menulis di dalamnya, memastikan konsistensi data.
+
+    Di sisi lain, `Mutex` hanya memungkinkan satu thread untuk mengakses data (baik untuk membaca atau menulis) pada satu waktu tertentu. `Mutex` tidak memungkinkan pembacaan data oleh beberapa thread secara bersamaan. Jika Vec<Notification> sering dibaca dan jarang ditulis, Mutex bisa menjadi bottleneck, mengurangi performa. Oleh karena itu, `RwLock` adalah pilihan yang lebih baik untuk skenario ini.
+
+2. ##### Static Variable's Mutatibiility: Rust vs Java
+    > In this tutorial, we used lazy_static external library to define Vec and DashMap as a “static” variable. Compared to Java where we can mutate the content of a static variable via a static function, why did not Rust allow us to do so?
+    Di Rust, variabel statis memiliki `'static` lifetime, yang berarti mereka hidup selama program berjalan. Namun, jaminan keamanan Rust memerlukan bahwa semua variabel statis harus aman untuk digunakan oleh _thread_. Hal ini karena variabel statis dibagikan di antara semua _thread_, dan Rust perlu memastikan bahwa tidak ada _data race_ yang terjadi.
+
+    Di Java, variabel statis dapat diubah secara langsung karena Java menangani sinkronisasinya secara otomatis. Namun, hal ini dapat menyebabkan masalah seperti _race condition_ jika tidak ditangani dengan baik.
+
+    Rust, di sisi lain, tidak mengizinkan mutasi variabel statis secara langsung untuk mencegah masalah ini. Sebagai gantinya, kita perlu menggunakan dtruktur data yang menyediakan mutabilitas interior, seperti `Mutex`, `RwLock`, atau tipe `Atomic`*, yang memastikan akses concurrent yang aman.
+
+    Crate `lazy_static` digunakan untuk mendefinisikan variabel statis yang kompleks. Ini memastikan bahwa inisialisasi variabel statis tersebut aman untuk thread. `RwLock` adalah contoh dari tipe yang aman untuk digunakan oleh thread yang menyediakan mutabilitas interior. Ini memungkinkan `Vec<Notification>` untuk diubah dengan aman di berbagai _thread_.
 
 #### Reflection Subscriber-2
+1. ##### **Rocket** Code Exploration
+    > Have you explored things outside of the steps in the tutorial, for example: src/lib.rs? If not, explain why you did not do so. If yes, explain things that you have learned from those other parts of code.
+    Ya, saya melihat-lihat beberapa file kode selain dari yang dijelaskan di tutorial. 
+    
+    Pada `src/main.rs` terdapat kode untuk inisialisasi aplikasi dengan menggunakan _framework_ Rocket. Kode tersebut menyetel konfigurasi _environment variables_ dan menyiapkan HTTP server dengan Rocket. 
+    
+    Kemudian pada `src/lib.rs`, terdapat beberapa _common `struct`_ dan _common `type`_ yang digunakan dalam server HTTP. Misalnya terdapat `struct AppConfig` yang digunakan untuk menyetel konfigurasi server HTTP. Selain itu, `Result`, `Error`, `ErrorResponse` digunakan sebagai struktur data yang merepresentasikan status berhasil/error & response error.
+
+    Selain itu, saya juga mengeksplorasi `Cargo.toml` dan `Rocket.toml`. Pada `Cargo.toml` terdapat konfigurasi daftar dependensi dari aplikasi Rust. Sedangkan pada `Rocket.toml` terdapat konfigurasi server, seperti host dan port server.
+
+2. ##### More Advance on Observer Pattern
+    >Since you have completed the tutorial by now and have tried to test your notification system by spawning multiple instances of Receiver, explain how Observer pattern eases you to plug in more subscribers. How about spawning more than one instance of Main app, will it still be easy enough to add to the system?
+
+    Observer pattern dapat memudahkan kita untuk menambahkan Subcsriber baru tanpa perlu melakukan perubahan langsung pada kode (_hardcoded_). Untuk menambahkan Subcsriber baru, kita hanya cukup membuat server Subscriber baru dengan konfigurasi server berbeda (host atau port), kemudian membuat request pada `/subcsribe/<product_type>`. Sangat sederhana dan mudah.
+
+    Namun, observer pattern sendiri tidak didesain untuk kasus _multiple publisher_. Menurut buku Head First Design Pattern (O'Reilly, 2004), Observer pattern didesain untuk one-to-many relationship (satu publisher, banyak observer), bukan many-to-many relationship. 
+    > The Observer Pattern defines a one-to-many dependency between objects so that when one object changes state, all of its dependents are notified and updated automatically
+
+    Sistem multiple publisher juga ada banyak variasinya, apakah semua publisher merupakan replika yang sama atau aplikasi berbeda. Untuk mengatasi kasus ini, diperlukan penyesuaian pada kode `/subcsribe` pada aplikasi Subscriber agar dapat menerima input URL publisher tertentu. Dengan ini, aplikasi Subscriber dapat dengan bebas memilih untuk subscribe Publisher mana saja.
+
+3. #####
+    > Have you tried to make your own Tests, or enhance documentation on your Postman collection? If you have tried those features, tell us whether it is useful for your work (it can be your tutorial work or your Group Project)
+
+    Ya, saya sudah membuat test pada Postman Collection. Fitur ini memungkinkan kita membuat automated test untuk API endpoint tertentu. Ini sangat membantu untuk memastikan bahwa response yang diterima sudah sesuai dengan apa yang diharapkan
